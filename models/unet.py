@@ -11,7 +11,8 @@ from diffusers.models.resnet import *
 from diffusers.models.transformer_2d import *
 from diffusers.models.unet_2d_blocks import *
 from diffusers.models.unet_2d_condition import *
-
+from diffusers.configuration_utils import *
+from diffusers.models.embeddings import *
 
 class ResidualXFormersAttnProcessor(XFormersAttnProcessor):
     def __call__(
@@ -1026,11 +1027,11 @@ def get_residual_up_block(
     up_block_type = up_block_type[7:] if up_block_type.startswith("UNetRes") else up_block_type
     if up_block_type == "UpBlock2D":
         return ResidualUpBlock2D(
-            num_layers=num_layers,
             in_channels=in_channels,
-            out_channels=out_channels,
             prev_output_channel=prev_output_channel,
+            out_channels=out_channels,
             temb_channels=temb_channels,
+            num_layers=num_layers,
             add_upsample=add_upsample,
             resnet_eps=resnet_eps,
             resnet_act_fn=resnet_act_fn,
@@ -1393,7 +1394,7 @@ class ResidualUNet2DConditionModel(UNet2DConditionModel):
             self.class_embedding = nn.Linear(projection_class_embeddings_input_dim, time_embed_dim)
         else:
             self.class_embedding = None
-
+ 
         if addition_embed_type == "text":
             if encoder_hid_dim is not None:
                 text_time_embedding_from_dim = encoder_hid_dim
@@ -1559,9 +1560,8 @@ class ResidualUNet2DConditionModel(UNet2DConditionModel):
                 add_upsample = False
 
             up_block = get_residual_up_block(
-                up_block_type,
+                up_block_type=up_block_type,
                 num_layers=reversed_layers_per_block[i] + 1,
-                transformer_layers_per_block=reversed_transformer_layers_per_block[i],
                 in_channels=input_channel,
                 out_channels=output_channel,
                 prev_output_channel=prev_output_channel,
@@ -1569,6 +1569,7 @@ class ResidualUNet2DConditionModel(UNet2DConditionModel):
                 add_upsample=add_upsample,
                 resnet_eps=norm_eps,
                 resnet_act_fn=act_fn,
+                transformer_layers_per_block=reversed_transformer_layers_per_block[i],
                 resnet_groups=norm_num_groups,
                 cross_attention_dim=reversed_cross_attention_dim[i],
                 num_attention_heads=reversed_num_attention_heads[i],
